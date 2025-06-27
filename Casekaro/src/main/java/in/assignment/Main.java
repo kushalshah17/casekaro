@@ -22,7 +22,7 @@ public class Main {
         // Step 2: Click on Mobile Covers
         page.locator("#HeaderMenu-mobile-covers").click();
         page.waitForTimeout(2000);
-        assert page.url().contains("mobile-back-covers") : "Failed to open Mobile Covers";
+        assert page.url().contains("mobile-back-cover-case") : "Failed to open Mobile Covers";
 
         // Step 3: Click on Apple
         Page applePage = page.waitForPopup(() -> {
@@ -30,6 +30,7 @@ public class Main {
             page.waitForTimeout(2000);
             page.locator("a:has-text('Apple')").click();
         });
+        
         applePage.waitForLoadState();
         assert applePage.url().contains("apple") : "Apple page did not open";
 
@@ -38,7 +39,7 @@ public class Main {
         applePage.waitForTimeout(2000);
         applePage.getByText("iPhone 16 Pro", new Page.GetByTextOptions().setExact(true)).click();
         applePage.waitForTimeout(2000);
-        assert applePage.url().toLowerCase().contains("iphone-16-pro") : "Not on iPhone 16 Pro page";
+        assert applePage.url().toLowerCase().contains("iphone-16-pro-back-covers") : "Not on iPhone 16 Pro page";
 
         // Step 5: Apply filter
         applePage.locator(".facets__summary-label:has-text('Availability')").click();
