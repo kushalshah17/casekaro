@@ -1,0 +1,4 @@
+$env:JAVA_HOME = "C:\Users\2021721\Downloads\jdk-24_windows-x64_bin\jdk-24.0.1"
+
+
+C:\Users\2021721\Downloads\apache-maven-3.9.10-bin\apache-maven-3.9.10\bin\mvn.cmd clean test

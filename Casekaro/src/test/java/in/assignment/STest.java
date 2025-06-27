@@ -1,0 +1,121 @@
+package in.assignment;
+
+import com.microsoft.playwright.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.testng.annotations.Test;
+
+import java.io.FileWriter;
+import java.util.*;
+
+public class STest {
+
+    @Test
+    public void testCasekaroScraping() throws Exception {
+        Playwright playwright = Playwright.create();
+        Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false)
+        );
+        Page page = browser.newPage();
+
+        // Step 1: Navigate to Casekaro
+        page.navigate("https://casekaro.com/");
+        page.waitForTimeout(5000);
+        assert page.url().contains("casekaro.com") : "Not on Casekaro home page";
+
+        // Step 2: Click on Mobile Covers
+        page.locator("#HeaderMenu-mobile-covers").click();
+        page.waitForTimeout(2000);
+        assert page.url().contains("mobile-back-cover-case") : "Failed to open Mobile Covers";
+
+        // Step 3: Click on Apple
+        Page applePage = page.waitForPopup(() -> {
+            page.locator("#search-bar-cover-page").fill("Apple");
+            page.waitForTimeout(2000);
+            page.locator("a:has-text('Apple')").click();
+        });
+
+        applePage.waitForLoadState();
+        assert applePage.url().contains("iphone-covers-cases") : "Apple page did not open";
+
+        // Step 4: Click on iPhone 16 Pro
+        applePage.locator("#search-bar-cover-page").fill("iPhone 16 Pro");
+        applePage.waitForTimeout(2000);
+        applePage.getByText("iPhone 16 Pro", new Page.GetByTextOptions().setExact(true)).click();
+        applePage.waitForTimeout(2000);
+        assert applePage.url().toLowerCase().contains("iphone-16-pro-back-covers") : "Not on iPhone 16 Pro page";
+
+        // Step 5: Apply filter
+        applePage.locator(".facets__summary-label:has-text('Availability')").click();
+        applePage.waitForTimeout(2000);
+        applePage.locator("label[for='Filter-filter.v.availability-1']").click();
+        applePage.waitForTimeout(2000);
+        assert applePage.locator("label[for='Filter-filter.v.availability-1'] input").isChecked() : "In-stock filter not applied";
+
+        // Step 6: Scrape data
+        applePage.waitForSelector("li.grid__item");
+        Locator products = applePage.locator("li.grid__item");
+        int count = products.count();
+        assert count > 0 : "No products found";
+
+        List<Map<String, String>> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            Locator product = products.nth(i);
+
+            String desc = product.locator("h3.card__heading a").first().innerText();
+
+            String priceAfter = "";
+            if (product.locator(".price-item--sale").count() > 0) {
+                priceAfter = product.locator(".price-item--sale").innerText();
+            } else {
+                priceAfter = product.locator(".price-item--regular").innerText();
+            }
+
+            String actual = "";
+            if (product.locator(".price__sale s").count() > 0) {
+                actual = product.locator(".price__sale s").innerText();
+            }
+
+            String img = product.locator("img").getAttribute("src");
+
+            Map<String, String> item = new LinkedHashMap<>();
+            item.put("description", desc);
+            item.put("price_after_discount", priceAfter);
+            item.put("actual_price", actual);
+            item.put("image_link", "https:" + img);
+            list.add(item);
+        }
+
+        // Step 7: Save JSON
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        FileWriter fw = new FileWriter("products.json");
+        gson.toJson(list, fw);
+        fw.close();
+
+        System.out.println("Done. " + list.size() + " items saved to products.json");
+        browser.close();
+
+        // Step 8: Sorting and Printing
+        for (int i = 0; i < list.size() - 1; i++) {
+            for (int j = 0; j < list.size() - i - 1; j++) {
+                String s1 = list.get(j).get("price_after_discount").split("₹ ")[1].trim();
+                String s2 = list.get(j + 1).get("price_after_discount").split("₹ ")[1].trim();
+                int price1 = (int) Float.parseFloat(s1);
+                int price2 = (int) Float.parseFloat(s2);
+                if (price1 > price2) {
+                    Map<String, String> temp = list.get(j);
+                    list.set(j, list.get(j + 1));
+                    list.set(j + 1, temp);
+                }
+            }
+        }
+
+        for (Map<String, String> item : list) {
+            System.out.println("Description: " + item.get("description"));
+            System.out.println("Price After Discount: " + item.get("price_after_discount"));
+            System.out.println("Actual Price: " + item.get("actual_price"));
+            System.out.println("Image Link: " + item.get("image_link"));
+            System.out.println("----------------------------------------");
+        }
+        System.out.println("Done. " + list.size() + " products saved & printed.");
+    }
+}
